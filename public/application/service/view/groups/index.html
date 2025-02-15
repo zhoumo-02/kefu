@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+    <link rel="stylesheet" href="/static/component/pear/css/pear.css" />
+</head>
+<body class="pear-container">
+		<div class="layui-card">
+			<div class="layui-card-body">
+				<form class="layui-form" action="">
+					<div class="layui-form-item">
+						<div class="layui-form-item layui-inline">
+							<label class="layui-form-label">分组名称</label>
+							<div class="layui-input-inline">
+								<input type="text" name="groupname" placeholder="请输入客服分组名称" class="layui-input">
+							</div>
+						</div>
+						<div class="layui-form-item layui-inline">
+							<button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="query">
+								<i class="layui-icon layui-icon-search"></i>
+								查询
+							</button>
+							<button type="reset" class="pear-btn pear-btn-md">
+								<i class="layui-icon layui-icon-refresh"></i>
+								重置
+							</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+		<div class="layui-card">
+			<div class="layui-card-body">
+				<table id="dataTable" lay-filter="dataTable"></table>
+			</div>
+		</div>
+
+		<script type="text/html" id="toolbar">
+		    <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
+		        <i class="layui-icon layui-icon-addition"></i>
+		        添加客服分组
+			</button>
+		</script>
+
+
+		<script type="text/html" id="tool-bar">
+			<button class="pear-btn pear-btn-primary pear-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</button>
+			<button class="pear-btn pear-btn-danger pear-btn-xs" lay-event="remove"><i class="layui-icon layui-icon-delete"></i>删除</button>
+		</script>
+
+        <script src="/static/component/layui/layui.js"></script>
+        <script src="/static/component/pear/pear.js"></script>
+        <script>
+			layui.use(['table', 'form', 'jquery','common'], function() {
+				let table = layui.table;
+				let form = layui.form;
+				let $ = layui.jquery;
+				let common = layui.common;
+
+				let MODULE_PATH = "/service/";
+
+                let cols = [
+                        [{
+                                field: 'id',
+                                title: 'ID',
+                                unresize: true,
+                                align: 'left',
+                                width: 80
+                            },{
+                                field: 'groupname',
+                                title: '客服分组',
+                                unresize: true,
+                                align: 'left'
+                            }, {
+                                field: 'group_num',
+                                title: '分组人数',
+                                unresize: true,
+                                align: 'left',
+                            },  {
+                                field: 'sort',
+                                title: '排序',
+                                unresize: true,
+                                align: 'left',
+                            },{
+								field: 'create_time',
+								title: '添加时间',
+								unresize: true,
+								align: 'left',
+							},
+                            {
+                                title: '操作',
+                                toolbar: '#tool-bar',
+                                align: 'center',
+                                width: 200
+                            }
+                        ]
+                    ];
+
+				table.render({
+					elem: '#dataTable',
+					url: MODULE_PATH + 'groups/index',
+					page: true,
+					cols: cols,
+                    cellMinWidth: 100,
+					skin: 'line',
+					toolbar: '#toolbar',
+					defaultToolbar: [{
+						title: '刷新',
+						layEvent: 'refresh',
+						icon: 'layui-icon-refresh',
+					}, 'filter', 'print', 'exports']
+				});
+
+				table.on('toolbar(dataTable)', function(obj) {
+					if (obj.event === 'refresh') {
+						window.refresh();
+					} else if (obj.event === 'add') {
+                        window.add(obj);
+                    }
+				});
+
+                table.on('tool(dataTable)', function(obj) {
+					if (obj.event === 'edit') {
+                        window.edit(obj);
+                    }else if (obj.event === 'remove') {
+                        window.remove(obj);
+                    }
+                });
+
+                form.on('submit(query)', function(data) {
+                    table.reload('dataTable', {
+                        where: data.field,
+                        page:{curr: 1}
+                    });
+                    return false;
+                });
+
+				window.add = function(obj) {
+                    layer.open({
+                        type: 2,
+                        title: '添加客服分组',
+                        shade: 0.1,
+                        area: ['500px', '230px'],
+                        content: MODULE_PATH + 'groups/add'
+                    });
+                };
+
+                window.edit = function(obj) {
+                    layer.open({
+                        type: 2,
+                        title: '编辑客服分组',
+                        shade: 0.1,
+                        area: ['500px', '230px'],
+                        content: MODULE_PATH + 'groups/edit?id='+obj.data.id
+                    });
+                };
+
+                window.remove = function(obj) {
+                    layer.confirm('确定要删除该分组吗？', {
+                        icon: 3,
+                        title: '提示'
+                    }, function(index) {
+                        layer.close(index);
+                        let loading = layer.load();
+                        $.ajax({
+                            url: MODULE_PATH + "groups/remove?id="+obj.data.id,
+                            dataType: 'json',
+                            type: 'delete',
+                            success: function(result) {
+                                layer.close(loading);
+                                if (result.code === 1) {
+                                    layer.msg(result.msg, {
+                                        icon: 1,
+                                        time: 1000
+                                    }, function() {
+                                        obj.del();
+                                    });
+                                } else {
+                                    layer.msg(result.msg, {
+                                        icon: 2,
+                                        time: 1000
+                                    });
+                                }
+                            }
+                        })
+                    });
+                };
+                
+				window.refresh = function(param) {
+					table.reload('dataTable');
+				}
+			})
+		</script>
+</body>
+</html>

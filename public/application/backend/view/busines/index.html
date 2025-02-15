@@ -1,0 +1,260 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+    <link rel="stylesheet" href="/static/component/pear/css/pear.css" />
+</head>
+<body class="pear-container">
+		<div class="layui-card">
+			<div class="layui-card-body">
+				<form class="layui-form" action="">
+					<div class="layui-form-item">
+						<div class="layui-form-item layui-inline">
+							<label class="layui-form-label">商户名</label>
+							<div class="layui-input-inline">
+								<input type="text" name="user_name" placeholder="请输入商户名" class="layui-input">
+							</div>
+						</div>
+						<div class="layui-form-item layui-inline">
+							<button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="query">
+								<i class="layui-icon layui-icon-search"></i>
+								查询
+							</button>
+							<button type="reset" class="pear-btn pear-btn-md">
+								<i class="layui-icon layui-icon-refresh"></i>
+								重置
+							</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+		<div class="layui-card">
+			<div class="layui-card-body">
+				<table id="dataTable" lay-filter="dataTable"></table>
+			</div>
+		</div>
+
+		<script type="text/html" id="toolbar">
+			<button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
+				<i class="layui-icon layui-icon-addition"></i>
+				添加商户
+			</button>
+		</script>
+
+		<script type="text/html" id="user-enable">
+			<input type="checkbox" name="enable" value="{{d.id}}" lay-skin="switch" lay-text="激活|禁用" lay-filter="user-enable" {{ d.is_delete == 0 ? 'checked' : '' }}>
+		</script>
+
+		<script type="text/html" id="tool-bar">
+			<button class="pear-btn pear-btn-primary pear-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</button>
+			<button class="pear-btn pear-btn-danger pear-btn-xs" lay-event="remove"><i class="layui-icon layui-icon-delete"></i>删除</button>
+			<button class="pear-btn pear-btn-warming pear-btn-xs" lay-event="clear"><i class="layui-icon layui-icon-fonts-clear"></i>清空记录</button>
+		</script>
+
+        <script src="/static/component/layui/layui.js"></script>
+        <script src="/static/component/pear/pear.js"></script>
+		<script src="__script__/platform/clipboard.min.js?v=__lkversion__"></script>
+        <script>
+			layui.use(['table', 'form', 'jquery','common'], function() {
+				let table = layui.table;
+				let form = layui.form;
+				let $ = layui.jquery;
+				let common = layui.common;
+
+				let MODULE_PATH = "/backend/";
+
+                let cols = [
+                        [{
+                                field: 'id',
+                                title: 'ID',
+                                unresize: true,
+                                align: 'left',
+                                width: 80
+                            },{
+                                field: 'business_name',
+                                title: '商户名称',
+                                unresize: true,
+                                align: 'left'
+                            }, {
+                                field: 'service_count',
+                                title: '客服数量',
+                                unresize: true,
+                                align: 'left',
+                            },  {
+                                field: 'max_count',
+                                title: '最大坐席数',
+                                unresize: true,
+                                align: 'left',
+                            },{
+								field: 'expire_time',
+								title: '到期时间',
+								unresize: true,
+								align: 'left'
+							},{
+								field: 'lang',
+								title: '默认语言',
+								unresize: true,
+								align: 'left',
+							},{
+                                field: 'is_delete',
+                                title: '状态',
+                                unresize: true,
+                                align: 'left',
+                                templet: '#user-enable'
+                            },{
+                                title: '操作',
+                                toolbar: '#tool-bar',
+                                align: 'center',
+                                width: 300
+                            }
+                        ]
+                    ];
+
+				table.render({
+					elem: '#dataTable',
+					url: MODULE_PATH + 'busines/index',
+					page: true,
+					cols: cols,
+                    cellMinWidth: 100,
+					skin: 'line',
+					toolbar: '#toolbar',
+					defaultToolbar: [{
+						title: '刷新',
+						layEvent: 'refresh',
+						icon: 'layui-icon-refresh',
+					}, 'filter', 'print', 'exports']
+				});
+
+				table.on('toolbar(dataTable)', function(obj) {
+					if (obj.event === 'refresh') {
+						window.refresh();
+					} else if (obj.event === 'add') {
+                        window.add(obj);
+                    }
+				});
+
+                table.on('tool(dataTable)', function(obj) {
+					if (obj.event === 'edit') {
+                        window.edit(obj);
+                    }else if (obj.event === 'remove') {
+                        window.remove(obj);
+                    }else if (obj.event === 'clear') {
+                        window.clear(obj);
+                    }
+                });
+
+                form.on('submit(query)', function(data) {
+                    table.reload('dataTable', {
+                        where: data.field,
+                        page:{curr: 1}
+                    });
+                    return false;
+                });
+
+                form.on('switch(user-enable)', function(obj) {
+                    let is_delete = obj.elem.checked?0:1;
+                    $.ajax({
+                        type: "POST",
+                        url: MODULE_PATH + "busines/is_delete",
+                        dataType: 'json',
+                        data: {'id':this.value,'is_delete':is_delete},
+                        success: function(result) {
+                            if (result.code === 1) {
+                                layer.tips(result.msg, obj.othis);
+                            } else {
+                                layer.tips(result.msg, obj.othis);
+                            }
+                        }
+                    });
+                });
+
+
+                window.add = function(obj) {
+                    layer.open({
+                        type: 2,
+                        title: '添加商户',
+                        shade: 0.1,
+                        area: ['600px', '500px'],
+                        content: MODULE_PATH + 'busines/add'
+                    });
+                };
+
+                window.edit = function(obj) {
+                    layer.open({
+                        type: 2,
+                        title: '编辑商户',
+                        shade: 0.1,
+                        area: ['500px', '500px'],
+                        content: MODULE_PATH + 'busines/edit?id='+obj.data.id
+                    });
+                };
+
+                window.remove = function(obj) {
+                    layer.confirm('确定要删除该商户吗？', {
+                        icon: 3,
+                        title: '提示'
+                    }, function(index) {
+                        layer.close(index);
+                        let loading = layer.load();
+                        $.ajax({
+                            url: MODULE_PATH + "busines/remove?id="+obj.data.id,
+                            dataType: 'json',
+                            type: 'delete',
+                            success: function(result) {
+                                layer.close(loading);
+                                if (result.code === 1) {
+                                    layer.msg(result.msg, {
+                                        icon: 1,
+                                        time: 1000
+                                    }, function() {
+                                        obj.del();
+                                    });
+                                } else {
+                                    layer.msg(result.msg, {
+                                        icon: 2,
+                                        time: 1000
+                                    });
+                                }
+                            }
+                        })
+                    });
+                };
+
+                window.clear = function(obj) {
+                    layer.confirm('确定要清空该商户下客服的所有聊天记录吗？', {
+                        icon: 3,
+                        title: '提示'
+                    }, function(index) {
+                        layer.close(index);
+                        let loading = layer.load();
+                        $.ajax({
+                            url: MODULE_PATH + "busines/clear?id="+obj.data.id,
+                            dataType: 'json',
+                            type: 'delete',
+                            success: function(result) {
+                                layer.close(loading);
+                                if (result.code === 1) {
+                                    layer.msg(result.msg, {
+                                        icon: 1,
+                                        time: 1000
+                                    });
+                                } else {
+                                    layer.msg(result.msg, {
+                                        icon: 2,
+                                        time: 1000
+                                    });
+                                }
+                            }
+                        })
+                    });
+                };
+                
+				window.refresh = function(param) {
+					table.reload('dataTable');
+				}
+			})
+		</script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title> AI智能客服管理系统 </title>
+  <script type="text/javascript" src="__libs__/jquery/jquery.min.js"></script>
+  <script src="__libs__/jquery/jquery.cookie.js?v=__lkversion__" type="text/javascript"></script>
+  <script src="__libs__/push/pusher.min.js?v=__lkversion__" type="text/javascript"></script>
+  <script src="__script__/admin/functions.js?v=__lkversion__" type="text/javascript"></script>
+  <!-- 依 赖 脚 本 -->
+  <script src="/static/component/layui/layui.js"></script>
+  <script src="/static/component/pear/pear.js"></script>
+  <script type="application/javascript">
+      var mediaStreamTrack;
+      var WEB_SOCKET_SWF_LOCATION = "__libs__/web_socket/WebSocketMain.swf";
+      var WEB_SOCKET_DEBUG = true;
+      var WEB_SOCKET_SUPPRESS_CROSS_DOMAIN_SWF_ERROR = true;
+      var chat_data =Array();
+      var record;
+      var choose_lock = false;
+      var myTitle = document.title;
+      var msgreminder = {:config('setting.msgreminder')};
+      var config ={
+          'app_key':'{$app_key}',
+          'whost':'{$whost}',
+          'value':{$value},
+          'wport':{$proxy_port} //$wport
+      };
+      function titleBlink(){
+          record++;
+
+          if(record === 3){
+              record =1;
+          }
+
+          if(record === 1){
+              document.title='【 】'+myTitle;
+          }
+
+          if(record === 2){
+              document.title='【消息】'+myTitle;
+          }
+
+          if(record > 3){
+              getwaitnum();
+              return;
+          }
+
+          setTimeout("titleBlink()",500);//调节时间，单位毫秒。
+      }
+
+      var wolive_connect =function () {
+          pusher = new Pusher('{$app_key}', {
+              encrypted: {$value}
+              , enabledTransports: ['ws']
+              , wsHost: '{$whost}'
+              , {$port}: {$proxy_port} // $wport
+              , authEndpoint: '/admin/login/auth'
+              ,disableStats: true
+      });
+
+
+          var web = "{$arr['business_id']}";
+          var value ="{$arr['service_id']}";
+          // 私人频道
+          var channelme = pusher.subscribe("ud" + value);
+          channelme.bind("on_notice", function (data) {
+              if(data.message.type == 'change'){
+                  layer.msg(data.message.msg);
+              }
+              getchat();
+              getwait();
+          });
+
+          /*channelme.bind("on_chat", function (data) {
+              $.cookie("cu_com",'');
+              layer.msg('该访客被删除');
+              getchat();
+          });*/
+          // 公共平道
+          var channelall = pusher.subscribe("all" + web);
+          channelall.bind("on_notice", function (data) {
+              if({$arr['groupid']} == 0 || {$arr['groupid']} == data.message.groupid){
+                  layer.msg(data.message.msg, {offset: "20px"});
+              }
+              if({$arr['groupid']} != data.message.groupid){
+                  layer.msg('该用户向其他分组咨询！', {offset: "20px"});
+              }
+              getwait();
+              getchat();
+          });
+
+          var channel =pusher.subscribe("kefu" + value);
+          // 发送一个推送
+          channel.bind("callbackpusher",function(data){
+              $.post("{:url('admin/set/callback','',true,true)}",data,function(res){
+              })
+          });
+
+          // 接受视频请求
+          channel.bind("video",function (data) {
+              getchat();
+              var msg = data.message;
+              var cha = data.channel;
+              var cid = data.cid;
+              var avatar =data.avatar;
+              var username =data.username;
+              layer.open({
+                  type: 1,
+                  title: '申请框',
+                  area: ['260px', '160px'],
+                  shade: 0.01,
+                  fixed: true,
+                  btn: ['接受', '拒绝'],
+                  content: "<div style='position: absolute;left:20px;top:15px;'><img src='"+avatar+"' width='40px' height='40px' style='border-radius:40px;position:absolute;left:5px;top:5px;'><span style='width:100px;position:absolute;left:70px;top:5px;font-size:13px;overflow-x: hidden;'>"+username+"</span><div style='width:90px;height:20px;position:absolute;left:70px;top:26px;'>"+msg+"</div></div>",
+                  yes: function () {
+                      layer.closeAll('page');
+                      var str='';
+                      str+='<div class="videos">';
+                      str+='<video id="localVideo" autoplay></video>';
+                      str+='<video id="remoteVideo" autoplay class="hidden"></video></div>';
+                      layer.open({
+                          type:1
+                          ,title: '视频'
+                          ,shade:0
+                          ,closeBtn:1
+                          ,area: ['440px', '378px']
+                          ,content:str
+                          ,end:function(){
+                              mediaStreamTrack.getTracks().forEach(function (track) {
+                                  track.stop();
+                              });
+
+                          }
+                      });
+                      try{
+                          connenctVide(cid);
+                      }catch(e){
+                          console.log(e);
+                          return;
+                      }
+                  },
+                  btn2:function(){
+                      $.ajax({
+                          url:'/admin/set/refuse',
+                          type:'post',
+                          data:{channel:cha}
+                      });
+
+                      layer.closeAll('page');
+                  }
+              });
+          });
+
+          channel.bind('bind-wechat',function(data){
+              layer.open({
+                  content: data.message
+                  ,btn: ['确定']
+                  ,yes: function(index, layero){
+                      location.reload();
+                  }
+                  ,cancel: function(){
+                      return false;
+                  }
+              });
+          });
+
+
+          channel.bind('getswitch',function(data){
+              layer.alert(data.message);
+              getchat();
+          });
+
+          // 接受拒绝视频请求
+          channel.bind("video-refuse",function (data) {
+              layer.alert(data.message);
+              layer.closeAll('page');
+          });
+          // 接受消息
+          channel.bind("cu-event", function (data) {
+
+              if("{$voice}" == 'open'){
+                  audioElementHovertree = document.createElement('audio');
+                  audioElementHovertree.setAttribute('src', "{$voice_address}");
+                  audioElementHovertree.setAttribute('autoplay', 'autoplay');
+              }
+              var debug, portrait,showtime;
+              var cdata = $.cookie("cu_com");
+
+              if (cdata) {
+                  var json = $.parseJSON(cdata);
+                  debug = json.visiter_id;
+                  portrait = json.avatar;
+              } else {
+                  debug = "";
+
+              }
+
+              if($.cookie("time") == ""){
+                  time =data.message.timestamp;
+                  $.cookie("time",time);
+                  var mydate =new Date(time*1000);
+                  showtime =mydate.getHours()+":"+mydate.getMinutes();
+              }else{
+                  time =$.cookie("time");
+                  if((data.message.timestamp - time) >60){
+                      var mydate =new Date(data.message.timestamp*1000);
+                      showtime =mydate.getHours()+":"+mydate.getMinutes();
+                  }else{
+                      showtime ="";
+                  }
+                  $.cookie("time",data.message.timestamp);
+              }
+              var str = data.message.content;
+              if (data.message.visiter_id == debug) {
+                  getwatch(data.message.visiter_id);
+                  str.replace(/<img [^>]*src=['"]([^'"]+)[^>]*>/gi, function (match, capture) {
+                      var pos = capture.lastIndexOf("/");
+                      var value = capture.substring(pos + 1);
+                      if (value.indexOf("emo") == 0) {
+                          str = data.message.content;
+                      } else {
+                          str = '[图片]';
+                      }
+                  });
+                  str = str.replace(/<div><a[^<>]+><i>.+?<\/i>.+?<\/a><\/div>/,'[文件]');
+                  str = str.replace(/<a[^<>]+>.+?<\/a>/,'[超链接]');
+                  str =str.replace(/<img src=['"]([^'"]+)[^>]*>/gi,'[图片]');
+                  $("#msg" + data.message.channel).html(str);
+                  var div = document.getElementById("wrap");
+              }
+              getnow(data.message);
+              if(div){
+                  div.scrollTop = div.scrollHeight;
+              }
+              $("#notices-icon").removeClass('hide');
+              layer.close();
+              layer.msg("收到新的客服消息");
+
+          });
+
+
+          // 通知 游客离线
+          channel.bind("logout", function (data) {
+              //表示访客离线
+              var cdata = $.cookie("cu_com");
+              var chas;
+              if (cdata) {
+                  var jsondata = $.parseJSON(cdata);
+                  chas = jsondata.channel;
+              }
+              if (chas == data.message.chas) {
+                  //头像变灰
+                  $("#v_state").text("离线");
+              }
+              $("#img" + data.message.chas).addClass("icon_gray");
+              getchat();
+          });
+
+          channel.bind("geton", function (data) {
+              //表示访客在线
+              var cdata = $.cookie("cu_com");
+              var chas;
+              if (cdata) {
+                  var jsondata = $.parseJSON(cdata);
+                  chas = jsondata.channel;
+              }
+              if (chas == data.message.chas) {
+                  //头像变亮
+                  $("#img" + data.message.chas).removeClass("icon_gray");
+                  $("#v_state").text("在线");
+              }
+              $("#img" + data.message.chas).removeClass("icon_gray");
+              getchat();
+          });
+
+          pusher.connection.bind('state_change', function(states) {
+              if(states.current == 'unavailable' || states.current == "disconnected" || states.current == "failed" ){
+                  pusher.unsubscribe("kefu" + value);
+                  pusher.unsubscribe("all" + web);
+                  pusher.unsubscribe("ud" + value);
+                  if (typeof pusher.isdisconnect == 'undefined') {
+                      pusher.isdisconnect = true;
+                      pusher.disconnect();
+                      delete pusher;
+                      window.setTimeout(function(){
+                          wolive_connect();
+                      },1000);
+                  }
+                  $(".profile").text('离线');
+              }
+          });
+
+          pusher.connection.bind('connected', function() {
+              $(".profile").text('在线');
+          });
+      };
+
+      function showpage(obj){
+          var value =$(obj).attr("name");
+          var key =$(obj).attr("id");
+          layer.tips(value, '#'+key,{tips: [4, '#2F4050']});
+      }
+      wolive_connect();
+  </script>
+  <script type="text/javascript" src="__libs__/web_socket/swfobject.js?v=__lkversion__"></script>
+  <script type="text/javascript" src="__libs__/web_socket/web_socket.js?v=__lkversion__"></script>
+  <script type="text/javascript" src="__script__/admin/online.js?v=20210929"></script>
+
+  <!-- 依 赖 样 式 -->
+  <link rel="stylesheet" href="/static/component/pear/css/pear.css" />
+  <!-- 加 载 样 式-->
+  <link rel="stylesheet" href="/static/admin/css/load.css" />
+  <!-- 布 局 样 式 -->
+  <link rel="stylesheet" href="/static/admin/css/admin.css" />
+  <script>
+      if(window!=top){ top.location.href = location.href; }
+  </script>
+</head>
+<!-- 结 构 代 码 -->
+<body class="layui-layout-body pear-admin">
+<!-- 布 局 框 架 -->
+<div class="layui-layout layui-layout-admin">
+  <div class="layui-header">
+    <!-- 顶 部 左 侧 功 能 -->
+    <ul class="layui-nav layui-layout-left">
+      <li class="collaspe layui-nav-item"><a href="#" class="layui-icon layui-icon-shrink-right"></a></li>
+      <li class="refresh layui-nav-item"><a href="#" class="layui-icon layui-icon-refresh-1" loading=600></a></li>
+    </ul>
+    <!-- 顶 部 右 侧 菜 单 -->
+    <div id="control" class="layui-layout-control"></div>
+    <ul class="layui-nav layui-layout-right" lay-filter="layui_nav_right">
+      <li class="layui-nav-item layui-hide-xs">
+        <a href="#" class="fullScreen layui-icon layui-icon-screen-full"></a>
+      </li>
+      <li class="layui-nav-item layui-hide-xs">
+        <a href="{:url('index/index/welcome')}" class="layui-icon layui-icon-website"></a>
+      </li>
+      <li class="layui-nav-item user">
+        <!-- 头 像 -->
+        <a href="javascript:;">
+          <img src="{$arr['avatar']}" class="layui-nav-img">
+          {$arr['nick_name']}
+          <!--{if $arr['state'] == 'online'}
+          <span class="layui-font-green">[在线]</span>
+          {else}
+          <span class="layui-font-gray">[离线]</span>
+          {/if}-->
+        </a>
+        <!-- 功 能 菜 单 -->
+        <dl class="layui-nav-child">
+          <dd>
+            <a href="javascript:void(0);" class="password">
+              修改密码
+            </a>
+          </dd>
+          <dd>
+            <a href="javascript:void(0);" class="cache">
+              清理缓存
+            </a>
+          </dd>
+          <dd>
+            <a href="javascript:void(0);" class="logout">
+              退出登录
+            </a>
+          </dd>
+        </dl>
+      </li>
+      <!-- 主 题 配 置 -->
+      <!--<li class="layui-nav-item setting"><a href="#" class="layui-icon layui-icon-more-vertical"></a></li>-->
+    </ul>
+  </div>
+  <!-- 侧 边 区 域 -->
+  <div class="layui-side layui-bg-black">
+    <!-- 顶 部 图 标 -->
+    <div class="layui-logo">
+      <!-- 图 表 -->
+      <img class="logo"></img>
+      <!-- 标 题 -->
+      <span class="title"></span>
+    </div>
+    <!-- 侧 边 菜 单 -->
+    <div class="layui-side-scroll">
+      <div id="sideMenu"></div>
+    </div>
+  </div>
+  <!-- 视 图 页 面 -->
+  <div class="layui-body">
+    <!-- 内 容 页 面 -->
+    <div id="content"></div>
+  </div>
+</div>
+<!-- 遮 盖 层 -->
+<div class="pear-cover"></div>
+<!-- 移 动 端 便 捷 操 作 -->
+<div class="pear-collasped-pe collaspe"><a href="#" class="layui-icon layui-icon-shrink-right"></a></div>
+<!-- 加 载 动 画-->
+<div class="loader-main">
+  <div class="loader"></div>
+</div>
+<!-- 框 架 初 始 化 -->
+<script>
+    layui.use(['admin', 'jquery', 'layer','element'], function() {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var layelem = layui.element;
+        var admin = layui.admin;
+        // 框 架 初 始 化
+        admin.render({
+            "logo": {
+                "title": "AI客服系统",
+                "image": "/static/admin/images/logo.png"
+            },
+            "menu": {
+                "data": "{:url('service/index/menu')}",
+                "accordion": true,
+                "control": false,
+                "select": "0"
+            },
+            "tab": {
+                "muiltTab": true,
+                "keepState": true,
+                "session": true,
+                "tabMax": 30,
+                "index": {
+                    "id": "0",
+                    "href": "{:url('service/index/home')}",
+                    "title": "首页"
+                }
+            },
+            "theme": {
+                "defaultColor": "2",
+                "defaultMenu": "dark-theme",
+                "allowCustom": true
+            },
+            "colors": [{
+                "id": "1",
+                "color": "#FF5722"
+            },
+                {
+                    "id": "2",
+                    "color": "#5FB878"
+                },
+                {
+                    "id": "3",
+                    "color": "#1E9FFF"
+                }, {
+                    "id": "4",
+                    "color": "#FFB800"
+                }, {
+                    "id": "5",
+                    "color": "darkgray"
+                }
+            ],
+            "other": {
+                "keepLoad": 100
+            },
+            "header":{
+                message: false
+            }
+        });
+        layelem.on('nav(layui_nav_right)', function(elem) {
+            if ($(elem).hasClass('logout')) {
+                layer.confirm('确定退出登录吗?', function(index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: "{:url('service/login/logout')}",
+                        type:"POST",
+                        dataType:"json",
+                        success: function(res) {
+                            if (res.code==1) {
+                                layer.msg(res.msg, {
+                                    icon: 1
+                                });
+                                setTimeout(function() {
+                                    location.href = "{:url('service/login/index')}";
+                                }, 333)
+                            }
+                        }
+                    });
+                });
+            }else if ($(elem).hasClass('password')) {
+                layer.open({
+                    type: 2,
+                    maxmin: false,
+                    title: '修改密码',
+                    shade: 0.1,
+                    area: ['400px', '300px'],
+                    content:"{:url('service/index/pass')}"
+                });
+            }else if ($(elem).hasClass('cache')) {
+                $.post("{:url('service/index/cash')}",
+                    function(data){
+                        layer.msg(data.msg, {time: 2000});
+                        location.reload()
+                    });
+            }
+
+        });
+    })
+</script>
+</body>
+</html>

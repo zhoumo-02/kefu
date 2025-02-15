@@ -1,0 +1,81 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2021/9/16
+ * Time: 17:17
+ */
+
+return [
+    'hello' => '안녕하세요! ',
+    'service_offline' =>'고객 서비스가 오프라인 상태입니다',
+    'service_online' =>'고객 서비스가 온라인 상태입니다',
+    'say_is_off' =>'세션이 닫혔습니다',
+    'data_error' =>'데이터가 불완전합니다',
+    'service_ban' => '판매자 고객 서비스 접근이 금지되었습니다',
+    'service_leave' =>'고객센터가 일시적으로 종료되었습니다. 메시지를 남겨주세요! 당신은 또한 다른 고객 서비스로 전송할 수 있습니다',
+    'service_empty' =>'전담 고객 서비스가 존재하지 않습니다',
+    'group_service_offline' =>'이 카테고리의 고객 서비스는 온라인이 아닙니다',
+    'session_close' =>'세션이 닫혔습니다',
+    'save_file_error' =>'저장 매체 구성 정보를 확인하십시오',
+    'offline' => '상대방이 온라인이 아닙니다',
+    'question_delete' =>'질문이 삭제되었습니다',
+    'ext_error' =>'지원하지 않는 파일 형식',
+    'illegal_img_error' =>'불법 이미지 파일',
+    'evaluate_error' =>'평가 실패, 다시 시도하십시오',
+    'evaluate_thk' =>'평가해주셔서 감사합니다',
+    'evaluate_score' => '평가해주세요',
+    'mobile_error' =>'휴대폰 형식이 잘못되었습니다',
+    'name_error' =>'이름을 입력하세요',
+    'save_ok' =>'제출 성공, 고객센터 응답을 기다려주세요',
+    'save_error' =>'제출 실패',
+
+    'robot_error' => [
+        '무슨 말인지 잘 이해가 되지 않습니다. 다른 질문을 해보세요',
+         '질문을 이해하지 못하지만 열심히 공부하고 있습니다',
+         '이 질문은 매우 흥미롭다',
+         '작은 공책에 당신의 질문을 적어두었습니다',
+         '무슨 말인지 이해가 안 가는데 설명 좀 해주세요',
+         '너무 빨리 물어봤어, 인터뷰 중 잠시 후에 물어봐'
+    ],
+    'send' => '보내다',
+    'please_enter' =>'내용을 입력하세요',
+    'ai_service' =>'AI 고객 지원',
+    'cancel' => '취소',
+    'submit' => '제출',
+    'evaluate_service' =>'고객 서비스 평가',
+    'transfer_service' =>'다른 고객 서비스로 이전되었습니다',
+    'off_line' =>'[오프라인]',
+    'name' => '이름',
+    'please_enter_name' =>'이름을 입력하세요',
+    'contact' => '연락처 정보',
+    'please_enter_contact' =>'연락처 정보를 입력하세요',
+    'close_wav' =>'안내음 닫기',
+    'open_wav' =>'안내음 켜기',
+    'paste_images_tip' =>'잘라낸 사진을 입력란에 붙여넣기',
+    'message_tip' =>'메시지가 있습니다',
+    'how_to_send_screenshot' =>'스크린샷은 어떻게 보내나요? ',
+    'ctrl_enter' =>'메시지를 보내려면 Enter 키를 누르고, 줄 바꿈하려면 Ctrl+Enter를 누르십시오.',
+    'enter_ctrl' =>'메시지를 보내려면 Ctrl+Enter를 누르고, 줄 바꿈하려면 Enter를 누르십시오.',
+    'disappointment' => '실망',
+    'dissatisfaction' => '불만족',
+    'commonly' => '일반적으로',
+    'satisfied' => '만족',
+    'surprised' => '놀랐다',
+
+    'please_select_images' =>'이미지를 선택하세요',
+    'not_supported' =>'이 형식의 파일은 지원되지 않습니다',
+    'no_data' =>'더 이상 데이터가 없습니다',
+    'tip_waiting' =>'알림: 줄서서 기다리는 중...',
+    'tip' => '팁 상자',
+    'is_transfer_service' =>'이 고객 서비스는 오프라인 상태입니다. 다른 고객 서비스로 이전하시겠습니까? ',
+    'yes' => '예',
+    'no' => '아니요',
+    'transferring' =>'전송 중...',
+    'guess_ask' =>'무엇을 묻고 싶은지 추측합니다:',
+    'please_enter_message' =>'메시지를 입력하세요',
+    'choose_lang' => '언어를 선택하세요',
+    'service_title' => '온라인 고객 지원',
+    'banword_tip' => '발송 실패, 내용 금지 어 포함',
+
+];

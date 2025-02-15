@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+    <link rel="stylesheet" href="/static/component/pear/css/pear.css" />
+	<style>
+		.layui-table-cell{
+			height: auto!important;
+		}
+		.star-img{
+			display: inline-block;
+			margin-left: 1px;
+			margin-top: -5px;
+			height: 16px;
+			width: 16px;
+		}
+	</style>
+</head>
+<body class="pear-container">
+		<div class="layui-card">
+			<div class="layui-card-body">
+				<form class="layui-form" action="">
+					<div class="layui-form-item">
+						<div class="layui-form-item layui-inline">
+							<label class="layui-form-label">关键词</label>
+							<div class="layui-input-inline">
+								<input type="text" name="keyword" placeholder="请输入客服" class="layui-input">
+							</div>
+						</div>
+						<div class="layui-form-item layui-inline">
+							<label class="layui-form-label">客服分组</label>
+							<div class="layui-input-inline">
+								<select name="group">
+									<option value="">请选择客服分组</option>
+									{foreach $group as $v}
+									<option value="{$v.id}">{$v.groupname|default=''}</option>
+									{/foreach}
+								</select>
+							</div>
+						</div>
+						<div class="layui-form-item layui-inline">
+							<label class="layui-form-label">评分等级</label>
+							<div class="layui-input-inline">
+								<select name="star">
+									<option value="">请选择评分等级</option>
+									<option value="1">一星</option>
+									<option value="2">二星</option>
+									<option value="3">三星</option>
+									<option value="4">四星</option>
+									<option value="5">五星</option>
+								</select>
+							</div>
+						</div>
+						<div class="layui-form-item layui-inline">
+							<button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="query">
+								<i class="layui-icon layui-icon-search"></i>
+								查询
+							</button>
+							<button type="reset" class="pear-btn pear-btn-md">
+								<i class="layui-icon layui-icon-refresh"></i>
+								重置
+							</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+		<div class="layui-card">
+			<div class="layui-card-body">
+				<table id="dataTable" lay-filter="dataTable"></table>
+			</div>
+		</div>
+		<script type="text/html" id="service-handle">
+			<span>{{d.service.user_name}}</span>
+		</script>
+		<script type="text/html" id="group-handle">
+			{{#if (d.group) { }}
+			<span>{{d.group.groupname}}</span>
+			{{# }else{ }}
+			<span>暂无分组</span>
+			{{# } }}
+		</script>
+		<script type="text/html" id="detail-handle">
+			{{# layui.each(d.detail, function(index, item){ }}
+				{{item.title}}
+				{{# for(var i=1;i<=item.score;i++){ }}
+				<img src="__image__/index/star-light.png" alt="" class="star-img">
+				{{# }; }}
+				<br>
+			{{# }); }}
+		</script>
+		<script type="text/html" id="word-handle">
+			{{#if (d.word_comment) { }}
+			<span>{{d.word_comment}}</span>
+			{{# }else{ }}
+			<span>—</span>
+			{{# } }}
+		</script>
+        <script src="/static/component/layui/layui.js"></script>
+        <script src="/static/component/pear/pear.js"></script>
+        <script>
+			layui.use(['table', 'form', 'jquery','common'], function() {
+				let table = layui.table;
+				let form = layui.form;
+				let $ = layui.jquery;
+				let common = layui.common;
+
+				let MODULE_PATH = "/service/";
+
+                let cols = [
+                        [{
+                                field: 'service',
+                                title: '客服',
+                                unresize: true,
+								width: 100,
+                                align: 'left',
+                            	templet: '#service-handle'
+                            },{
+                                field: 'group',
+                                title: '所属分组',
+                                unresize: true,
+                            	width: 120,
+                                align: 'left',
+                            	templet: '#group-handle'
+                            }, {
+                                field: 'visiter_name',
+                                title: '客户',
+                                unresize: true,
+                                align: 'left',
+                            },  {
+                                field: 'add_time',
+                                title: '评价时间',
+                                unresize: true,
+                                align: 'left',
+                            },
+							{
+                                title: '评价情况',
+                                field: 'detail',
+                                align: 'left',
+                                templet: '#detail-handle',
+                                width: 250,
+							},
+                            {
+                                field: 'word_comment',
+                                title: '评价内容',
+                                unresize: true,
+                                align: 'left',
+                                templet: '#word-handle'
+                            }
+                        ]
+                    ];
+
+				table.render({
+					elem: '#dataTable',
+					url: MODULE_PATH + 'comments/index',
+					page: true,
+					cols: cols,
+                    cellMinWidth: 100,
+					skin: 'line',
+					toolbar: '#toolbar',
+					defaultToolbar: [{
+						title: '刷新',
+						layEvent: 'refresh',
+						icon: 'layui-icon-refresh',
+					}, 'filter', 'print', 'exports']
+				});
+
+				table.on('toolbar(dataTable)', function(obj) {
+					if (obj.event === 'refresh') {
+						window.refresh();
+					}
+				});
+
+                form.on('submit(query)', function(data) {
+                    table.reload('dataTable', {
+                        where: data.field,
+                        page:{curr: 1}
+                    });
+                    return false;
+                });
+                
+				window.refresh = function(param) {
+					table.reload('dataTable');
+				}
+			})
+		</script>
+</body>
+</html>

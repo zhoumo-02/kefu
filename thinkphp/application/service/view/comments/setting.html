@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/static/component/pear/css/pear.css" />
+    <script src="/static/component/layui/layui.js"></script>
+    <script src="/static/component/pear/pear.js"></script>
+    <script type="text/javascript" src="__libs__/jquery/jquery.min.js?v=__lkversion__"></script>
+    <script src="__libs__/vue/vue.js?v=__lkversion__" type="text/javascript"></script>
+    <style>
+        .layui-form-label span{
+            font-size: 12px;
+            color: #666;
+        }
+        .comments{
+            margin-top: 20px;
+        }
+        .star{
+            display: inline-block;
+            margin: 0 10px;
+        }
+        .star img{
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body class="pear-container">
+<div class="layui-row layui-col-space10" id="container">
+    <div class="layui-col-md12">
+        <div class="layui-card">
+            <div class="layui-card-header">评价设置</div>
+            <div class="layui-card-body layui-row layui-col-space10 layui-form" v-show="loading">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">评价说明</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="title"  v-model="list.title" value=""  placeholder="请输入评价说明" autocomplete="off" class="layui-input" style="width: 50%">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">评价条目<br><span>(最多限5条)</span></label>
+                    <div class="layui-input-block comments" v-for="(item,index) in list.comments" :key="index">
+                        <input type="text"  placeholder="请输入评价说明" autocomplete="off" class="layui-input" style="width: 30%;display: inline-block" v-model="list.comments[index]">
+                        <div class="star">
+                            <img src="__image__/index/star-light.png" alt="">
+                            <img src="__image__/index/star-light.png" alt="">
+                            <img src="__image__/index/star-light.png" alt="">
+                            <img src="__image__/index/star-light.png" alt="">
+                            <img src="__image__/index/star-light.png" alt="">
+                        </div>
+                        <a class="pear-btn pear-btn-xs" lay-event="remove" v-if='list.comments.length > 1'  @click="low(index)"><i class="layui-icon layui-icon-delete"></i>删除</a>
+                    </div>
+                </div>
+                <div class="layui-form-item" v-if="list.comments.length != 5">
+                    <label class="layui-form-label"></label>
+                    <div class="layui-input-block">
+                        <a class="pear-btn pear-btn-primary pear-btn-xs" lay-event="remove" @click="add"><i class="layui-icon layui-icon-addition"></i>添加条目</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">文字评价</label>
+                    <div class="layui-input-block">
+                        <input id="word_switch" type="checkbox" name="switch" lay-skin="switch" lay-filter="switchTest">
+                    </div>
+                </div>
+                <div class="layui-form-item text-evaluate" v-if="list.word_switch == 'open'">
+                    <label class="layui-form-label">评价说明</label>
+                    <div class="layui-input-block">
+                        <input type="text" maxlength="6" v-model="list.word_title"  placeholder="请输入评价说明（限6个）" autocomplete="off" class="layui-input" style="width: 30%">
+                    </div>
+                </div>
+                <div class="layui-input-block" style="min-height: 80px;">
+                    <button type="submit" class="pear-btn pear-btn-primary" @click="saveSetting('list')">保存</button>
+                    <button type="reset" class="pear-btn">重置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var app = new Vue({
+        el: '#container',
+        data() {
+            return {
+                loading: false,
+                list: {
+                    comments: [''],
+                    word_switch: 'close'
+                }
+            };
+        },
+        created() {
+            let that  = this;
+            that.getSetting();
+        },
+        methods: {
+            add() {
+                if(this.list.comments.length < 5) {
+                    let item = '';
+                    this.list.comments.push(item)
+                }else {
+                    return false
+                }
+            },
+            low(e) {
+                this.list.comments.splice(e,1)
+            },
+            getSetting () {
+                let that = this;
+                $.ajax({
+                    url: '/service/comments/setting',
+                    type: 'get',
+                    success: function (res) {
+                        that.loading = true;
+                        if (res.code === 1) {
+                            if(res.data != null) {
+                                that.list = res.data;
+                                if(that.list.word_switch == 'open') {
+                                    $("#word_switch+.layui-form-switch").addClass('layui-form-onswitch');
+                                    $("#word_switch").attr('checked',true)
+                                }
+                            }
+                        }
+                    },
+                    error:function(res) {
+                        that.loading = true;
+                    }
+                });
+            },
+            saveSetting () {
+                let that = this;
+                $.ajax({
+                    url: '/service/comments/save',
+                    type: 'post',
+                    data: this.list,
+                    success: function (res) {
+                        if (res.code==1) {
+                            layer.msg(res.msg, {icon: 1});
+                        }else {
+                            layer.msg(res.msg,{icon:2})
+                        }
+                    },
+                    error:function(res) {
+                        layer.msg("操作异常");
+                    }
+                });
+            }
+        }
+    });
+
+    layui.use(['form'], function(){
+        var form = layui.form
+        form.on('switch(switchTest)', function(data){
+            if(this.checked){
+                $('.text-evaluate').show();
+                app.list.word_switch = 'open';
+            }else{
+                $('.text-evaluate').hide();
+                app.list.word_switch = 'close';
+            }
+        });
+    });
+</script>
+</body>
+</html>
